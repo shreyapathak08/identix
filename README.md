@@ -52,7 +52,6 @@ Data flows through three layers: **acquisition** (sensors → ESP32), **processi
 | Capacitive touch sensor | Liveness trigger / activation | 2.0V–5.5V | Digital |
 | 16x2 I2C LCD | Status display | 5V | I²C |
 
-**Approximate prototype cost:** ₹1,830 (ESP32 ₹450 · PPG sensor ₹150 · DS18B20 ₹150 · touch sensor ₹80 · LCD ₹300 · misc. ₹700).
 
 ## Software stack
 
@@ -127,10 +126,10 @@ This repo is cleaned up for GitHub from the original project report, with a coup
 
 | Name | Roll No. |
 |---|---|
-| Muskan Gupta | 2401331550078 |
-| Satakshi Shukla | 2401331550107 |
-| Shreya Pathak | 2401331550116 |
-| Vashu Singh | 2401331550138 |
+| Muskan Gupta | 240133XXXXX78 |
+| Satakshi Shukla | 240133XXXX107 |
+| Shreya Pathak | 240133XXXX116 |
+| Vashu Singh | 240133XXXX138 |
 
 Project guide: Prof. Steven David · HoD: Prof. Mayank Deep Khare · Department of Computer Science (IoT), Noida Institute of Engineering and Technology, Greater Noida.
 
