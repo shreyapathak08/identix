@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Identix | MFA Authentication</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; background-color: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .dashboard { background: #1e293b; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; width: 80%; max-width: 500px; }
+    h1 { color: #38bdf8; letter-spacing: 2px; margin-bottom: 5px; }
+    input { background: #0f172a; border: 1px solid #334155; color: white; padding: 12px; border-radius: 8px; width: 80%; margin-bottom: 15px; outline: none; font-size: 1rem; text-align: center; }
+    .btn { background: #38bdf8; color: #0f172a; border: none; padding: 12px 25px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 85%; transition: 0.3s; }
+    .status-box { margin-top: 25px; padding: 20px; border-radius: 10px; font-weight: bold; background: #0f172a; border: 1px solid #334155; }
+    .waiting { color: #fbbf24; border-color: #fbbf24; }
+    .granted { color: #4ade80; border-color: #4ade80; }
+    .denied { color: #f87171; border-color: #f87171; }
+    .log-container { margin-top: 20px; background: #0f172a; border-radius: 10px; padding: 15px; text-align: left; height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; border: 1px solid #334155; }
+    #authSection, #regSection { display: none; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+  <div class="dashboard">
+    <h1>IDENTIX AUTH</h1>
+
+    <div id="lookupSection">
+      <input type="text" id="usernameInput" placeholder="Enter Username">
+      <button class="btn" onclick="lookupUser()">CONTINUE</button>
+    </div>
+
+    <div id="authSection">
+      <p id="welcomeMsg" style="color: #94a3b8;"></p>
+      <input type="password" id="pinInput" placeholder="Enter 4-Digit PIN" maxlength="4">
+      <button class="btn" onclick="verifyPin()">VERIFY & START SCAN</button>
+    </div>
+
+    <div id="regSection">
+      <p style="color: #fbbf24;">User not found. Register now?</p>
+      <input type="password" id="newPinInput" placeholder="Set 4-Digit PIN" maxlength="4">
+      <button class="btn" onclick="registerUser()">CREATE ACCOUNT</button>
+    </div>
+
+    <div id="statusBox" class="status-box">SYSTEM IDLE</div>
+    <div id="statsBox" style="margin-top: 10px; font-size: 0.85rem; color: #64748b;"></div>
+
+    <div class="log-container" id="auditLog">
+      <div style="color: #475569;">&gt; Persistent security log active...</div>
+    </div>
+  </div>
+
+  <script>
+    // TODO: replace with your own Firebase Realtime Database URL.
+    // Firebase Console -> Project Settings -> your project's databaseURL.
+    // Do NOT commit your real project URL/keys to a public repo unless your
+    // Firebase security rules are locked down (see README "Known limitations").
+    const firebaseConfig = { databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let userDB = {};
+    let activeUser = "";
+
+    // Keep user list synced
+    db.ref('users').on('value', snap => { userDB = snap.val() || {}; });
+
+    function lookupUser() {
+      activeUser = document.getElementById('usernameInput').value.trim();
+      if (!activeUser) return;
+
+      document.getElementById('lookupSection').style.display = 'none';
+
+      if (userDB[activeUser]) {
+        document.getElementById('authSection').style.display = 'block';
+        document.getElementById('welcomeMsg').innerText = `Welcome, ${activeUser}`;
+      } else {
+        document.getElementById('regSection').style.display = 'block';
+      }
+    }
+
+    function verifyPin() {
+      const pin = document.getElementById('pinInput').value;
+      if (pin === userDB[activeUser].pin) {
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('statusBox').className = "status-box waiting";
+        document.getElementById('statusBox').innerText = "PIN OK. PLEASE SCAN FINGER.";
+
+        // Sync session for hardware
+        db.ref('currentSession').set({ name: activeUser });
+      } else {
+        alert("Wrong PIN!");
+      }
+    }
+
+    function registerUser() {
+      const pin = document.getElementById('newPinInput').value;
+      if (pin.length !== 4) return alert("PIN must be 4 digits");
+      db.ref('users/' + activeUser).set({ pin: pin }).then(() => location.reload());
+    }
+
+    // LISTENER: Watches 'scan' for live UI and 'logs' for history
+    db.ref('scan').on('value', snap => {
+      const d = snap.val();
+      if (!d || d.status === "IDLE") return;
+
+      const sBox = document.getElementById('statusBox');
+      sBox.className = "status-box " + d.status.toLowerCase();
+      sBox.innerText = d.status === "GRANTED" ? `WELCOME, ${activeUser}` : "ACCESS DENIED";
+      document.getElementById('statsBox').innerText = `BPM: ${d.bpm} | Temp: ${d.temp}°C`;
+    });
+
+    db.ref('logs').limitToLast(1).on('child_added', snap => {
+      const d = snap.val();
+      const entry = document.createElement('div');
+      entry.style.color = d.status === "GRANTED" ? "#4ade80" : "#f87171";
+      entry.innerText = `[${new Date().toLocaleTimeString()}] ${d.username}: ${d.status}`;
+      document.getElementById('auditLog').prepend(entry);
+    });
+  </script>
+</body>
+</html>
